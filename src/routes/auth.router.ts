@@ -1,0 +1,13 @@
+import express from "express";
+import authController from "../controllers/auth.controller.js";
+import asyncHandler from "../utils/asyncHandler.js";
+
+const authRouter = express.Router({
+  caseSensitive: true,
+  strict: true,
+});
+
+authRouter.post("/register", asyncHandler(authController.register));
+authRouter.post("/verify-email", asyncHandler(authController.verifyEmail));
+
+export default authRouter;

@@ -1,0 +1,5 @@
+{
+  "migration-file-language": "ts",
+  "template-file-name": "postgres-migrate/templates/migration-template.ts",
+  "migrations-dir": "postgres-migrate/migrations"
+}
