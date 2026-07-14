@@ -40,6 +40,9 @@ A user authentication service built with Node.js, Express, TypeScript, PostgreSQ
 ## Project Structure
 ```
 authentication-service/
+├── postgres-migrate/
+│   ├── migrations/      # Database migration files
+│   └── templates/       # Templates used to generate new migrations
 ├── src/
 │   ├── config/          # Environment variables and application configuration
 │   ├── controllers/     # Handles HTTP requests and responses
