@@ -1,11 +1,15 @@
 import type { PoolClient } from "pg";
 import pool from "../config/database.js";
-import type { CreateUserInput, RegisteredUser } from "../types/user.type.js";
+import type {
+  UserCreateRepoInput,
+  UserCreateRepoOutput,
+  UserFindRepoOutputPrivate,
+} from "../types/user.type.js";
 
 const create = async (
-  user: CreateUserInput,
+  user: UserCreateRepoInput,
   client?: PoolClient,
-): Promise<RegisteredUser> => {
+): Promise<UserCreateRepoOutput> => {
   const db = client ?? pool;
   const query = {
     text: `
@@ -33,15 +37,19 @@ const create = async (
     ],
   };
 
-  const result = await db.query<RegisteredUser>(query);
+  const result = await db.query<UserCreateRepoOutput>(query);
   return result.rows[0];
 };
 
-const findByUniqueKey = async (
-  field: "email" | "username",
-  value: string,
-  client?: PoolClient,
-): Promise<RegisteredUser | null> => {
+const findByCondition = async ({
+  condition,
+  values,
+  client,
+}: {
+  condition: string;
+  values: string[];
+  client?: PoolClient;
+}): Promise<UserFindRepoOutputPrivate | null> => {
   const db = client ?? pool;
 
   const query = {
@@ -51,25 +59,49 @@ const findByUniqueKey = async (
         first_name,
         last_name,
         username,
-        email
+        email,
+        email_verified_at,
+        password_hash
       FROM users
-      WHERE ${field} = $1
+      WHERE ${condition}
       LIMIT 1;
     `,
-    values: [value],
+    values,
   };
 
-  const result = await db.query<RegisteredUser>(query);
-
+  const result = await db.query<UserFindRepoOutputPrivate>(query);
   return result.rows[0] ?? null;
 };
 
+const findOne = async (
+  field: "email" | "username",
+  value: string,
+  client?: PoolClient,
+): Promise<UserFindRepoOutputPrivate | null> => {
+  return findByCondition({
+    condition: `${field} = $1`,
+    values: [value],
+    client,
+  });
+};
+
 const findByEmail = (email: string, client?: PoolClient) => {
-  return findByUniqueKey("email", email, client);
+  return findOne("email", email, client);
 };
 
 const findByUsername = (username: string, client?: PoolClient) => {
-  return findByUniqueKey("username", username, client);
+  return findOne("username", username, client);
+};
+
+const findByUsernameOrEmail = (
+  usernameOrEmail: string,
+  client?: PoolClient,
+) => {
+  return findByCondition({
+    condition: "email = $1 OR username = $1",
+    values: [usernameOrEmail],
+    client,
+  });
 };
 
 const markEmailAsVerified = async (
@@ -91,9 +123,10 @@ const markEmailAsVerified = async (
 
 const userRepository = {
   create,
-  markEmailAsVerified,
   findByEmail,
   findByUsername,
+  markEmailAsVerified,
+  findByUsernameOrEmail,
 };
 
 export default userRepository;

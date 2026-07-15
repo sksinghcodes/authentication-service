@@ -1,15 +1,20 @@
 import bcrypt from "bcrypt";
 import userRepository from "../repositories/user.repository.js";
 import { SALT_ROUNDS } from "../config/env.js";
-import type { RegisteredUser, RegisterRequest } from "../types/user.type.js";
+import type {
+  UserRegisterRequest,
+  UserSelfResponse,
+} from "../types/user.type.js";
 import { hasOnlyValidCharacters } from "../utils/validation.js";
-import ValidationError from "../errors/ValidattionError.js";
+import ValidationError from "../errors/validation-error.js";
 import emailVerificationTokenService from "./email-verification-token.service.js";
 import pool from "../config/database.js";
 import emailService from "./email.service.js";
 import emailVerificationTokenRepository from "../repositories/email-verification-token.repository.js";
 
-const register = async (user: RegisterRequest): Promise<RegisteredUser> => {
+const register = async (
+  user: UserRegisterRequest,
+): Promise<UserSelfResponse> => {
   const trimmedUser = {
     first_name: user.first_name?.trim(),
     last_name: user.last_name?.trim(),
@@ -119,14 +124,23 @@ const register = async (user: RegisterRequest): Promise<RegisteredUser> => {
 
     const newUser = await userRepository.create(
       {
-        first_name,
-        last_name,
+        first_name: first_name || null,
+        last_name: last_name || null,
         email,
         username,
         password_hash,
       },
       client,
     );
+
+    const userResponse: UserSelfResponse = {
+      id: newUser.id,
+      first_name: newUser.first_name,
+      last_name: newUser.last_name,
+      username: newUser.username,
+      email: newUser.email,
+      email_is_verified: false,
+    };
 
     const token = await emailVerificationTokenService.create(
       newUser.id,
@@ -135,7 +149,7 @@ const register = async (user: RegisterRequest): Promise<RegisteredUser> => {
 
     await client.query("COMMIT");
     await emailService.sendVerificationEmail(newUser.email, token);
-    return newUser;
+    return userResponse;
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
