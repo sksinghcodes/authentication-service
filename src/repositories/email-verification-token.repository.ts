@@ -1,12 +1,12 @@
 import type { PoolClient } from "pg";
 import pool from "../config/database.js";
 import {
-  CreateEmailTokenInput,
-  EmailVerificationTokenPublic,
+  EmailVerificationTokenCreateRepoInput,
+  EmailVerificationTokenCreateRepoOutput,
 } from "../types/email-verification-token.types.js";
 
 const create = async (
-  token: CreateEmailTokenInput,
+  token: EmailVerificationTokenCreateRepoInput,
   client?: PoolClient,
 ): Promise<void> => {
   const db = client ?? pool;
@@ -28,7 +28,7 @@ const create = async (
 const findByTokenHash = async (
   tokenHash: string,
   client?: PoolClient,
-): Promise<EmailVerificationTokenPublic | null> => {
+): Promise<EmailVerificationTokenCreateRepoOutput | null> => {
   const db = client ?? pool;
   const query = {
     text: `
@@ -52,10 +52,6 @@ const deleteByField = async (
   value: string,
   client?: PoolClient,
 ): Promise<void> => {
-  if (!["id", "user_id"].includes(field)) {
-    throw new Error(`Invalid unique field: ${field}`);
-  }
-
   const db = client ?? pool;
 
   const query = {
