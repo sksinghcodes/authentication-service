@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
-import ValidationError from "./ValidattionError.js";
+import AppError from "../errors/app-error.js";
+import ValidationError from "../errors/validation-error.js";
 
 const errorMiddleware = (
   error: unknown,
@@ -8,9 +9,15 @@ const errorMiddleware = (
   next: NextFunction,
 ) => {
   if (error instanceof ValidationError) {
-    return res.status(400).json({
+    return res.status(error.statusCode).json({
       message: error.message,
       errors: error.errors,
+    });
+  }
+
+  if (error instanceof AppError) {
+    return res.status(error.statusCode).json({
+      message: error.message,
     });
   }
 
