@@ -8,6 +8,7 @@ const authRouter = express.Router({
 });
 
 authRouter.post("/register", asyncHandler(authController.register));
+authRouter.post("/login", asyncHandler(authController.login));
 authRouter.post("/verify-email", asyncHandler(authController.verifyEmail));
 
 export default authRouter;

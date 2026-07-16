@@ -1,7 +1,9 @@
 import bcrypt from "bcrypt";
+import crypto from "node:crypto";
 import userRepository from "../repositories/user.repository.js";
 import { SALT_ROUNDS } from "../config/env.js";
 import type {
+  UserLoginRequest,
   UserRegisterRequest,
   UserSelfResponse,
 } from "../types/user.type.js";
@@ -11,6 +13,11 @@ import emailVerificationTokenService from "./email-verification-token.service.js
 import pool from "../config/database.js";
 import emailService from "./email.service.js";
 import emailVerificationTokenRepository from "../repositories/email-verification-token.repository.js";
+import ConflictError from "../errors/conflict-error.js";
+import AuthenticationError from "../errors/authentication-error.js";
+import ForbiddenError from "../errors/forbidden-error.js";
+import jwtService from "./jwt.service.js";
+import refreshTokenRepository from "../repositories/refresh-token.repository.js";
 
 const register = async (
   user: UserRegisterRequest,
@@ -56,7 +63,7 @@ const register = async (
   } else {
     const result = await userRepository.findByEmail(email);
     if (result) {
-      validationErrors.email = "Email already exists";
+      throw new ConflictError("Email already exists");
     }
   }
 
@@ -78,7 +85,7 @@ const register = async (
     if (usernameValid.isValid) {
       const result = await userRepository.findByUsername(username);
       if (result) {
-        validationErrors.username = "Username already exists";
+        throw new ConflictError("Username already exists");
       }
     } else {
       validationErrors.username =
@@ -200,9 +207,63 @@ const verifyEmail = async (token: string) => {
   }
 };
 
+const login = async (credentials: UserLoginRequest) => {
+  const trimmedCredentials = {
+    usernameOrEmail: credentials.usernameOrEmail?.trim().toLowerCase(),
+    password: credentials.password?.trim(),
+  };
+
+  const { usernameOrEmail, password } = trimmedCredentials;
+
+  if (!usernameOrEmail || !password) {
+    throw new ValidationError({
+      creadentials: "Invalid credentials",
+    });
+  }
+
+  const user = await userRepository.findByUsernameOrEmail(usernameOrEmail);
+
+  if (!user) {
+    throw new AuthenticationError("Invalid credentials");
+  }
+
+  if (!user.email_verified_at) {
+    throw new ForbiddenError("Email is not verified");
+  }
+
+  const passwordIsCorrect = await bcrypt.compare(password, user.password_hash);
+
+  if (!passwordIsCorrect) {
+    throw new AuthenticationError("Invalid credentials");
+  }
+
+  const accessToken = jwtService.createAccessToken(user.id);
+  const refreshToken = jwtService.createRefreshToken(user.id);
+  const tokenHash = crypto
+    .createHash("sha256")
+    .update(refreshToken.token)
+    .digest("hex");
+
+  await refreshTokenRepository.create({
+    user_id: user.id,
+    token_hash: tokenHash,
+    expires_at: refreshToken.expiresAt,
+    created_at: refreshToken.issuedAt,
+    device_info: null,
+    user_agent: null,
+    ip_address: null,
+  });
+
+  return {
+    accessToken: accessToken.token,
+    refreshToken: refreshToken.token,
+  };
+};
+
 const authService = {
   register,
   verifyEmail,
+  login,
 };
 
 export default authService;
