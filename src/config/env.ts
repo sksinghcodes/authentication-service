@@ -30,6 +30,10 @@ if (!process.env.JWT_ACCESS_SECRET) {
   throw new Error("JWT_ACCESS_SECRET environment variable is missing.");
 }
 
+if (!process.env.ALLOWED_CLIENTS) {
+  throw new Error("ALLOWED_CLIENTS environment variable is missing.");
+}
+
 export const PORT = Number(process.env.PORT ?? 4000);
 
 // security config
@@ -55,4 +59,9 @@ export const JWT_REFRESH_EXPIRES_IN_DAYS = Number(
 );
 export const JWT_ACCESS_EXPIRES_IN_MINUTES = Number(
   process.env.JWT_ACCESS_EXPIRES_IN_MINUTES ?? 15,
+);
+
+// clients config
+export const ALLOWED_CLIENTS = process.env.ALLOWED_CLIENTS.split(",").map(
+  (origin) => origin.trim(),
 );
