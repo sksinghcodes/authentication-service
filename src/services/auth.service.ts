@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import userRepository from "../repositories/user.repository.js";
 import type {
   UserLoginRequest,
@@ -16,7 +15,10 @@ import AuthenticationError from "../errors/authentication-error.js";
 import ForbiddenError from "../errors/forbidden-error.js";
 import jwtService from "./jwt.service.js";
 import refreshTokenRepository from "../repositories/refresh-token.repository.js";
+import { Cookies } from "../types/token.type.js";
+import cryptoService from "./crypo.service.js";
 import bcryptService from "./bcrypt.service.js";
+import refreshTokenService from "./refreshToken.service.js";
 
 const register = async (
   user: UserRegisterRequest,
@@ -206,10 +208,15 @@ const verifyEmail = async (token: string) => {
   }
 };
 
-const login = async (credentials: UserLoginRequest) => {
+const login = async (credentials: UserLoginRequest, cookies: Cookies) => {
+  const safeCookies: Cookies = {
+    accessToken: cookies?.accessToken || "",
+    refreshToken: cookies?.refreshToken || "",
+  };
+
   const trimmedCredentials = {
-    usernameOrEmail: credentials.usernameOrEmail?.trim().toLowerCase(),
-    password: credentials.password?.trim(),
+    usernameOrEmail: credentials?.usernameOrEmail?.trim().toLowerCase(),
+    password: credentials?.password?.trim(),
   };
 
   const { usernameOrEmail, password } = trimmedCredentials;
@@ -241,25 +248,38 @@ const login = async (credentials: UserLoginRequest) => {
 
   const accessToken = jwtService.createAccessToken(user.id);
   const refreshToken = jwtService.createRefreshToken(user.id);
-  const tokenHash = crypto
-    .createHash("sha256")
-    .update(refreshToken.token)
-    .digest("hex");
 
-  await refreshTokenRepository.create({
-    user_id: user.id,
-    token_hash: tokenHash,
-    expires_at: refreshToken.expiresAt,
-    created_at: refreshToken.issuedAt,
-    device_info: null,
-    user_agent: null,
-    ip_address: null,
-  });
+  const tokenHash = cryptoService.hash(refreshToken.token);
+  const client = await pool.connect();
 
-  return {
-    accessToken: accessToken.token,
-    refreshToken: refreshToken.token,
-  };
+  try {
+    await client.query("BEGIN");
+    await refreshTokenRepository.create(
+      {
+        user_id: user.id,
+        token_hash: tokenHash,
+        expires_at: refreshToken.expiresAt,
+        created_at: refreshToken.issuedAt,
+        device_info: null,
+        user_agent: null,
+        ip_address: null,
+      },
+      client,
+    );
+    if (safeCookies.refreshToken) {
+      await refreshTokenService.deleteByToken(safeCookies.refreshToken);
+    }
+    await client.query("COMMIT");
+    return {
+      accessToken: accessToken.token,
+      refreshToken: refreshToken.token,
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 const authService = {

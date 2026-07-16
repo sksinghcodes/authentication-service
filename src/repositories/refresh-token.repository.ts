@@ -35,8 +35,23 @@ const create = async (
   await db.query(query);
 };
 
+const deleteByTokenHash = async (tokenHash: string, client?: PoolClient) => {
+  const db = client ?? pool;
+  const query = {
+    text: `
+      DELETE
+      FROM refresh_tokens
+      WHERE token_hash = $1;
+    `,
+    values: [tokenHash],
+  };
+
+  await db.query(query);
+};
+
 const refreshTokenRepository = {
   create,
+  deleteByTokenHash,
 };
 
 export default refreshTokenRepository;

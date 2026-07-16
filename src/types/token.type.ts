@@ -25,3 +25,8 @@ export interface RefreshTokenCreateRepoInput {
   user_agent: string | null;
   ip_address: string | null;
 }
+
+export interface Cookies {
+  accessToken: string;
+  refreshToken: string;
+}
