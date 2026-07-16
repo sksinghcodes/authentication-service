@@ -1,10 +1,10 @@
-import crypto from "node:crypto";
 import emailVerificationTokenRepository from "../repositories/email-verification-token.repository.js";
 import type { PoolClient } from "pg";
+import cryptoService from "./crypo.service.js";
 
 const create = async (user_id: string, client?: PoolClient) => {
-  const token = crypto.randomBytes(32).toString("hex");
-  const token_hash = crypto.createHash("sha256").update(token).digest("hex");
+  const token = cryptoService.generateToken();
+  const token_hash = cryptoService.hash(token);
   const expires_at = new Date(Date.now() + 10 * 60 * 1000);
   await emailVerificationTokenRepository.create(
     {
@@ -19,7 +19,7 @@ const create = async (user_id: string, client?: PoolClient) => {
 };
 
 const findByToken = (token: string) => {
-  const token_hash = crypto.createHash("sha256").update(token).digest("hex");
+  const token_hash = cryptoService.hash(token);
   return emailVerificationTokenRepository.findByTokenHash(token_hash);
 };
 
