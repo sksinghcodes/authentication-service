@@ -1,7 +1,5 @@
-import bcrypt from "bcrypt";
 import crypto from "node:crypto";
 import userRepository from "../repositories/user.repository.js";
-import { SALT_ROUNDS } from "../config/env.js";
 import type {
   UserLoginRequest,
   UserRegisterRequest,
@@ -18,6 +16,7 @@ import AuthenticationError from "../errors/authentication-error.js";
 import ForbiddenError from "../errors/forbidden-error.js";
 import jwtService from "./jwt.service.js";
 import refreshTokenRepository from "../repositories/refresh-token.repository.js";
+import bcryptService from "./bcrypt.service.js";
 
 const register = async (
   user: UserRegisterRequest,
@@ -123,7 +122,7 @@ const register = async (
     throw new ValidationError(validationErrors);
   }
 
-  const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
+  const password_hash = await bcryptService.hash(password);
 
   const client = await pool.connect();
   try {
@@ -231,7 +230,10 @@ const login = async (credentials: UserLoginRequest) => {
     throw new ForbiddenError("Email is not verified");
   }
 
-  const passwordIsCorrect = await bcrypt.compare(password, user.password_hash);
+  const passwordIsCorrect = await bcryptService.compare(
+    password,
+    user.password_hash,
+  );
 
   if (!passwordIsCorrect) {
     throw new AuthenticationError("Invalid credentials");
