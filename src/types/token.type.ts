@@ -26,7 +26,19 @@ export interface RefreshTokenCreateRepoInput {
   ip_address: string | null;
 }
 
-export interface Cookies {
+export interface Tokens {
   accessToken: string;
   refreshToken: string;
+}
+
+export interface RefreshTokenFindRepoOutput {
+  id: string;
+  user_id: string;
+  token_hash: string;
+  expires_at: Date;
+  created_at: Date;
+  revoked_at: Date | null;
+  device_info: string | null;
+  user_agent: string | null;
+  ip_address: string | null;
 }

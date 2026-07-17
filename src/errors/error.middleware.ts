@@ -1,6 +1,9 @@
 import type { NextFunction, Request, Response } from "express";
 import AppError from "../errors/app-error.js";
 import ValidationError from "../errors/validation-error.js";
+import jwt from "jsonwebtoken";
+
+const { JsonWebTokenError, TokenExpiredError } = jwt;
 
 const errorMiddleware = (
   error: unknown,
@@ -17,6 +20,15 @@ const errorMiddleware = (
 
   if (error instanceof AppError) {
     return res.status(error.statusCode).json({
+      message: error.message,
+    });
+  }
+
+  if (
+    error instanceof TokenExpiredError ||
+    error instanceof JsonWebTokenError
+  ) {
+    return res.status(401).json({
       message: error.message,
     });
   }

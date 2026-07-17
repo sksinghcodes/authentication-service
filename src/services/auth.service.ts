@@ -15,10 +15,13 @@ import AuthenticationError from "../errors/authentication-error.js";
 import ForbiddenError from "../errors/forbidden-error.js";
 import jwtService from "./jwt.service.js";
 import refreshTokenRepository from "../repositories/refresh-token.repository.js";
-import { Cookies } from "../types/token.type.js";
+import { Tokens } from "../types/token.type.js";
 import cryptoService from "./crypo.service.js";
 import bcryptService from "./bcrypt.service.js";
 import refreshTokenService from "./refreshToken.service.js";
+import jwt from "jsonwebtoken";
+
+const { JsonWebTokenError, TokenExpiredError } = jwt;
 
 const register = async (
   user: UserRegisterRequest,
@@ -208,8 +211,8 @@ const verifyEmail = async (token: string) => {
   }
 };
 
-const login = async (credentials: UserLoginRequest, cookies: Cookies) => {
-  const safeCookies: Cookies = {
+const login = async (credentials: UserLoginRequest, cookies: Tokens) => {
+  const safeCookies: Tokens = {
     accessToken: cookies?.accessToken || "",
     refreshToken: cookies?.refreshToken || "",
   };
@@ -266,8 +269,9 @@ const login = async (credentials: UserLoginRequest, cookies: Cookies) => {
       },
       client,
     );
+
     if (safeCookies.refreshToken) {
-      await refreshTokenService.deleteByToken(safeCookies.refreshToken);
+      await refreshTokenService.deleteByToken(safeCookies.refreshToken, client);
     }
     await client.query("COMMIT");
     return {
@@ -282,9 +286,89 @@ const login = async (credentials: UserLoginRequest, cookies: Cookies) => {
   }
 };
 
+const refresh = async (cookies: Tokens): Promise<Tokens> => {
+  const safeCookies: Tokens = {
+    accessToken: cookies?.accessToken || "",
+    refreshToken: cookies?.refreshToken || "",
+  };
+
+  // if it throws an error, global error handler catches it
+  const refreshTokenDecoded = jwtService.verifyRefreshToken(
+    safeCookies.refreshToken,
+  );
+
+  if (safeCookies.accessToken) {
+    try {
+      jwtService.verifyAccessToken(safeCookies.accessToken);
+    } catch (error) {
+      // access token may be expired but should not be invalid
+      if (!(error instanceof TokenExpiredError)) {
+        throw error;
+      }
+    }
+  }
+
+  const refreshToken = await refreshTokenService.findByToken(
+    safeCookies.refreshToken,
+  );
+
+  if (!refreshToken || refreshToken.user_id !== refreshTokenDecoded.sub) {
+    throw new JsonWebTokenError("jwt malformed");
+  }
+
+  if (refreshToken.revoked_at) {
+    throw new JsonWebTokenError("jwt revoked");
+  }
+
+  if (refreshToken.expires_at.getTime() < Date.now()) {
+    throw new TokenExpiredError("jwt expired", refreshToken.expires_at);
+  }
+
+  const newTokens = {
+    refresh: jwtService.createRefreshToken(refreshToken.user_id),
+    access: jwtService.createAccessToken(refreshToken.user_id),
+  };
+
+  const newRefreshTokenHash = cryptoService.hash(newTokens.refresh.token);
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    await refreshTokenRepository.create(
+      {
+        user_id: refreshToken.user_id,
+        token_hash: newRefreshTokenHash,
+        expires_at: newTokens.refresh.expiresAt,
+        created_at: newTokens.refresh.issuedAt,
+        device_info: null,
+        user_agent: null,
+        ip_address: null,
+      },
+      client,
+    );
+
+    await refreshTokenService.revokeByToken(safeCookies.refreshToken, client);
+
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  return {
+    refreshToken: newTokens.refresh.token,
+    accessToken: newTokens.access.token,
+  };
+};
+
 const authService = {
   register,
   verifyEmail,
+  refresh,
   login,
 };
 

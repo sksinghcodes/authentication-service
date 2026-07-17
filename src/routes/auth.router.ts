@@ -10,5 +10,6 @@ const authRouter = express.Router({
 authRouter.post("/register", asyncHandler(authController.register));
 authRouter.post("/login", asyncHandler(authController.login));
 authRouter.get("/verify-email", asyncHandler(authController.verifyEmail));
+authRouter.post("/refresh", asyncHandler(authController.refresh));
 
 export default authRouter;

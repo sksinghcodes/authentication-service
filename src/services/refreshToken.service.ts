@@ -7,8 +7,20 @@ const deleteByToken = async (token: string, client?: PoolClient) => {
   await refreshTokenRepository.deleteByTokenHash(tokenHash, client);
 };
 
+const findByToken = async (token: string, client?: PoolClient) => {
+  const tokenHash = cryptoService.hash(token);
+  return await refreshTokenRepository.findByTokenHash(tokenHash, client);
+};
+
+const revokeByToken = async (token: string, client?: PoolClient) => {
+  const tokenHash = cryptoService.hash(token);
+  await refreshTokenRepository.revokeByTokenHash(tokenHash, client);
+};
+
 const refreshTokenService = {
   deleteByToken,
+  findByToken,
+  revokeByToken,
 };
 
 export default refreshTokenService;
