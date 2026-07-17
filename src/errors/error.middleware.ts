@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import AppError from "../errors/app-error.js";
 import ValidationError from "../errors/validation-error.js";
 import jwt from "jsonwebtoken";
+import { STATUS_CODE } from "../config/constants.js";
 
 const { JsonWebTokenError, TokenExpiredError } = jwt;
 
@@ -28,7 +29,7 @@ const errorMiddleware = (
     error instanceof TokenExpiredError ||
     error instanceof JsonWebTokenError
   ) {
-    return res.status(401).json({
+    return res.status(STATUS_CODE.UNAUTHORIZED).json({
       message: error.message,
     });
   }

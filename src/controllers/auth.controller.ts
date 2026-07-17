@@ -3,10 +3,11 @@ import authService from "../services/auth.service.js";
 import path from "node:path";
 import { Tokens } from "../types/token.type.js";
 import cookieService from "../services/cookie.service.js";
+import { STATUS_CODE } from "../config/constants.js";
 
 const register = async (req: Request, res: Response) => {
   const user = await authService.register(req.body);
-  res.status(201).json(user);
+  res.status(STATUS_CODE.CREATED).json(user);
 };
 
 const verifyEmail = async (req: Request, res: Response) => {
@@ -25,13 +26,13 @@ const verifyEmail = async (req: Request, res: Response) => {
 const login = async (req: Request, res: Response) => {
   const tokens = await authService.login(req.body, req.cookies as Tokens);
   cookieService.set(res, tokens);
-  res.status(200).json({ success: true });
+  res.status(STATUS_CODE.OK).json({ success: true });
 };
 
 const refresh = async (req: Request, res: Response) => {
   const tokens = await authService.refresh(req.cookies as Tokens);
   cookieService.set(res, tokens);
-  res.status(200).json({ success: true });
+  res.status(STATUS_CODE.OK).json({ success: true });
 };
 
 const authController = {
