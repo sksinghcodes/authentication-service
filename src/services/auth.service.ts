@@ -1,5 +1,6 @@
 import userRepository from "../repositories/user.repository.js";
 import type {
+  UserCreateRepoOutput,
   UserLoginRequest,
   UserRegisterRequest,
   UserSelfResponse,
@@ -64,11 +65,6 @@ const register = async (
     email.includes(" ")
   ) {
     validationErrors.email = "Email is invalid";
-  } else {
-    const result = await userRepository.findByEmail(email);
-    if (result) {
-      throw new ConflictError("Email already exists");
-    }
   }
 
   if (!username) {
@@ -86,12 +82,7 @@ const register = async (
       otherCharacters: "_.",
     });
 
-    if (usernameValid.isValid) {
-      const result = await userRepository.findByUsername(username);
-      if (result) {
-        throw new ConflictError("Username already exists");
-      }
-    } else {
+    if (!usernameValid.isValid) {
       validationErrors.username =
         "These characters are not allowed in Username " +
         usernameValid.invalidChars.join();
@@ -127,13 +118,29 @@ const register = async (
     throw new ValidationError(validationErrors);
   }
 
+  const [resultByEmail, resultByUsername] = await Promise.all([
+    userRepository.findByEmail(email),
+    userRepository.findByUsername(username),
+  ]);
+
+  if (resultByEmail) {
+    throw new ConflictError("Email already exists");
+  }
+
+  if (resultByUsername) {
+    throw new ConflictError("Username already exists");
+  }
+
   const password_hash = await bcryptService.hash(password);
 
+  let newUser: UserCreateRepoOutput;
+  let token: string;
+
   const client = await pool.connect();
+
   try {
     await client.query("BEGIN");
-
-    const newUser = await userRepository.create(
+    newUser = await userRepository.create(
       {
         first_name: first_name || null,
         last_name: last_name || null,
@@ -144,29 +151,26 @@ const register = async (
       client,
     );
 
-    const userResponse: UserSelfResponse = {
-      id: newUser.id,
-      first_name: newUser.first_name,
-      last_name: newUser.last_name,
-      username: newUser.username,
-      email: newUser.email,
-      email_is_verified: false,
-    };
-
-    const token = await emailVerificationTokenService.create(
-      newUser.id,
-      client,
-    );
-
+    token = await emailVerificationTokenService.create(newUser.id, client);
     await client.query("COMMIT");
-    await emailService.sendVerificationEmail(newUser.email, token);
-    return userResponse;
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
   } finally {
     client.release();
   }
+
+  const userResponse = {
+    id: newUser.id,
+    first_name: newUser.first_name,
+    last_name: newUser.last_name,
+    username: newUser.username,
+    email: newUser.email,
+    email_is_verified: false,
+  };
+
+  await emailService.sendVerificationEmail(userResponse.email, token);
+  return userResponse;
 };
 
 const verifyEmail = async (token: string) => {
