@@ -4,7 +4,7 @@ export interface EmailVerificationTokenCreateRepoInput {
   expires_at: Date;
 }
 
-export interface EmailVerificationTokenCreateRepoOutput {
+export interface EmailVerificationTokenFindRepoOutput {
   id: string;
   user_id: string;
   expires_at: Date;

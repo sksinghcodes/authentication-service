@@ -2,7 +2,7 @@ import type { PoolClient } from "pg";
 import pool from "../config/database.js";
 import {
   EmailVerificationTokenCreateRepoInput,
-  EmailVerificationTokenCreateRepoOutput,
+  EmailVerificationTokenFindRepoOutput,
 } from "../types/email-verification-token.types.js";
 
 const create = async (
@@ -28,7 +28,7 @@ const create = async (
 const findByTokenHash = async (
   tokenHash: string,
   client?: PoolClient,
-): Promise<EmailVerificationTokenCreateRepoOutput | null> => {
+): Promise<EmailVerificationTokenFindRepoOutput | null> => {
   const db = client ?? pool;
   const query = {
     text: `
