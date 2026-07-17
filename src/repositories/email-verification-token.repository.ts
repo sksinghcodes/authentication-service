@@ -43,7 +43,7 @@ const findByTokenHash = async (
     values: [tokenHash],
   };
 
-  const result = await db.query(query);
+  const result = await db.query<EmailVerificationTokenFindRepoOutput>(query);
   return result.rows[0] ?? null;
 };
 

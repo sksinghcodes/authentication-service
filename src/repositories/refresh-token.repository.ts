@@ -38,7 +38,10 @@ const create = async (
   await db.query(query);
 };
 
-const deleteByTokenHash = async (tokenHash: string, client?: PoolClient) => {
+const deleteByTokenHash = async (
+  tokenHash: string,
+  client?: PoolClient,
+): Promise<void> => {
   const db = client ?? pool;
   const query = {
     text: `
@@ -79,7 +82,10 @@ const findByTokenHash = async (
   return result.rows[0] ?? null;
 };
 
-const revokeByTokenHash = async (tokenHash: string, client?: PoolClient) => {
+const revokeByTokenHash = async (
+  tokenHash: string,
+  client?: PoolClient,
+): Promise<void> => {
   const db = client ?? pool;
   const query = {
     text: `

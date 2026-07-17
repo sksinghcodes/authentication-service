@@ -85,18 +85,24 @@ const findOne = async (
   });
 };
 
-const findByEmail = (email: string, client?: PoolClient) => {
+const findByEmail = (
+  email: string,
+  client?: PoolClient,
+): Promise<UserFindRepoOutputPrivate | null> => {
   return findOne("email", email, client);
 };
 
-const findByUsername = (username: string, client?: PoolClient) => {
+const findByUsername = (
+  username: string,
+  client?: PoolClient,
+): Promise<UserFindRepoOutputPrivate | null> => {
   return findOne("username", username, client);
 };
 
 const findByUsernameOrEmail = (
   usernameOrEmail: string,
   client?: PoolClient,
-) => {
+): Promise<UserFindRepoOutputPrivate | null> => {
   return findByCondition({
     condition: "email = $1 OR username = $1",
     values: [usernameOrEmail],
