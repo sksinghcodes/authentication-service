@@ -10,21 +10,26 @@ import type {
   CreateTokenOutput,
   JwtTokenPayload,
 } from "../types/token.type.js";
+import {
+  MILLISECONDS_IN_A_SECOND,
+  SECONDS_IN_A_DAY,
+  SECONDS_IN_A_MINUTE,
+} from "../config/constants.js";
 
 const createToken = ({
   userId,
   secret,
   expiresInSeconds,
 }: CreateTokenInput): CreateTokenOutput => {
-  const iat = Math.floor(Date.now() / 1000);
+  const iat = Math.floor(Date.now() / MILLISECONDS_IN_A_SECOND);
   const exp = iat + expiresInSeconds;
   const token = jwt.sign({ sub: userId, exp, iat }, secret, {
     algorithm: "HS256",
   });
   return {
     token,
-    issuedAt: new Date(iat * 1000),
-    expiresAt: new Date(exp * 1000),
+    issuedAt: new Date(iat * MILLISECONDS_IN_A_SECOND),
+    expiresAt: new Date(exp * MILLISECONDS_IN_A_SECOND),
   };
 };
 
@@ -32,28 +37,30 @@ const createRefreshToken = (userId: string) => {
   return createToken({
     userId,
     secret: JWT_REFRESH_SECRET,
-    expiresInSeconds: JWT_REFRESH_EXPIRES_IN_DAYS * 60 * 60 * 24,
+    expiresInSeconds: JWT_REFRESH_EXPIRES_IN_DAYS * SECONDS_IN_A_DAY,
   });
 };
 
-const verifyRefreshToken = (token: string) => {
-  return jwt.verify(token, JWT_REFRESH_SECRET, {
+const verifyToken = (token: string, secret: string): JwtTokenPayload => {
+  return jwt.verify(token, secret, {
     algorithms: ["HS256"],
   }) as JwtTokenPayload;
+};
+
+const verifyRefreshToken = (token: string) => {
+  return verifyToken(token, JWT_REFRESH_SECRET);
 };
 
 const createAccessToken = (userId: string) => {
   return createToken({
     userId,
     secret: JWT_ACCESS_SECRET,
-    expiresInSeconds: JWT_ACCESS_EXPIRES_IN_MINUTES * 60,
+    expiresInSeconds: JWT_ACCESS_EXPIRES_IN_MINUTES * SECONDS_IN_A_MINUTE,
   });
 };
 
 const verifyAccessToken = (token: string): JwtTokenPayload => {
-  return jwt.verify(token, JWT_ACCESS_SECRET, {
-    algorithms: ["HS256"],
-  }) as JwtTokenPayload;
+  return verifyToken(token, JWT_ACCESS_SECRET);
 };
 
 const jwtService = {
