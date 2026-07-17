@@ -1,16 +1,24 @@
 import emailVerificationTokenRepository from "../repositories/email-verification-token.repository.js";
 import type { PoolClient } from "pg";
 import cryptoService from "./crypo.service.js";
+import {
+  EMAIL_VERIFICATION_TOKEN_EXPIRY_MINUTES,
+  MILLISECONDS_IN_A_MINUTE,
+} from "../config/constants.js";
+import type { EmailVerificationTokenFindRepoOutput } from "../types/email-verification-token.types.js";
 
-const create = async (user_id: string, client?: PoolClient) => {
+const create = async (userId: string, client?: PoolClient): Promise<string> => {
   const token = cryptoService.generateToken();
-  const token_hash = cryptoService.hash(token);
-  const expires_at = new Date(Date.now() + 10 * 60 * 1000);
+  const tokenHash = cryptoService.hash(token);
+  const expiresAt = new Date(
+    Date.now() +
+      EMAIL_VERIFICATION_TOKEN_EXPIRY_MINUTES * MILLISECONDS_IN_A_MINUTE,
+  );
   await emailVerificationTokenRepository.create(
     {
-      user_id,
-      token_hash,
-      expires_at,
+      user_id: userId,
+      token_hash: tokenHash,
+      expires_at: expiresAt,
     },
     client,
   );
@@ -18,9 +26,12 @@ const create = async (user_id: string, client?: PoolClient) => {
   return token;
 };
 
-const findByToken = (token: string) => {
-  const token_hash = cryptoService.hash(token);
-  return emailVerificationTokenRepository.findByTokenHash(token_hash);
+const findByToken = (
+  token: string,
+  client?: PoolClient,
+): Promise<EmailVerificationTokenFindRepoOutput | null> => {
+  const tokenHash = cryptoService.hash(token);
+  return emailVerificationTokenRepository.findByTokenHash(tokenHash, client);
 };
 
 const emailVerificationTokenService = {
