@@ -1,5 +1,11 @@
 import { Response } from "express";
 import { Tokens } from "../types/token.type.js";
+import {
+  ACCESS_TOKEN_COOKIE_NAME,
+  ACCESS_TOKEN_COOKIE_PATH,
+  REFRESH_TOKEN_COOKIE_NAME,
+  REFRESH_TOKEN_COOKIE_PATH,
+} from "../config/constants.js";
 
 const cookieOptions = (path: string) => ({
   httpOnly: true,
@@ -17,13 +23,23 @@ const clearCookie = (res: Response, key: string, path: string) => {
 };
 
 const set = (res: Response, token: Tokens): void => {
-  setCookie(res, "accessToken", token.accessToken, "/api");
-  setCookie(res, "refreshToken", token.refreshToken, "/api/auth");
+  setCookie(
+    res,
+    ACCESS_TOKEN_COOKIE_NAME,
+    token.accessToken,
+    ACCESS_TOKEN_COOKIE_PATH,
+  );
+  setCookie(
+    res,
+    REFRESH_TOKEN_COOKIE_NAME,
+    token.refreshToken,
+    REFRESH_TOKEN_COOKIE_PATH,
+  );
 };
 
 const remove = (res: Response) => {
-  clearCookie(res, "accessToken", "/api");
-  clearCookie(res, "refreshToken", "/api/auth");
+  clearCookie(res, ACCESS_TOKEN_COOKIE_NAME, ACCESS_TOKEN_COOKIE_PATH);
+  clearCookie(res, REFRESH_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_PATH);
 };
 
 const cookieService = {
