@@ -10,17 +10,14 @@ const register = async (req: Request, res: Response) => {
   res.status(STATUS_CODE.CREATED).json(user);
 };
 
+const requestEmailVerification = async (req: Request, res: Response) => {
+  await authService.requestEmailVerification(req.body?.email);
+  res.status(STATUS_CODE.OK).json({ success: true });
+};
+
 const verifyEmail = async (req: Request, res: Response) => {
-  try {
-    await authService.verifyEmail(req.query.token as string);
-    res.sendFile(
-      path.join(process.cwd(), "src/public", "verification-success.html"),
-    );
-  } catch {
-    res.sendFile(
-      path.join(process.cwd(), "src/public", "verification-failed.html"),
-    );
-  }
+  await authService.verifyEmail(req.query.token as string);
+  res.status(STATUS_CODE.OK).json({ success: true });
 };
 
 const login = async (req: Request, res: Response) => {
@@ -43,6 +40,7 @@ const logout = async (req: Request, res: Response) => {
 
 const authController = {
   register,
+  requestEmailVerification,
   verifyEmail,
   refresh,
   login,

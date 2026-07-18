@@ -9,7 +9,11 @@ const authRouter = express.Router({
 
 authRouter.post("/register", asyncHandler(authController.register));
 authRouter.post("/login", asyncHandler(authController.login));
-authRouter.get("/verify-email", asyncHandler(authController.verifyEmail));
+authRouter.post("/verify-email", asyncHandler(authController.verifyEmail));
+authRouter.post(
+  "/request-email-verification",
+  asyncHandler(authController.requestEmailVerification),
+);
 authRouter.post("/refresh", asyncHandler(authController.refresh));
 authRouter.post("/logout", asyncHandler(authController.logout));
 

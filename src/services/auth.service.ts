@@ -171,6 +171,25 @@ const register = async (
   return userResponse;
 };
 
+const requestEmailVerification = async (email: string) => {
+  if (!email) {
+    throw new AuthenticationError("Invalid Credential");
+  }
+
+  const user = await userRepository.findByEmail(email);
+
+  if (!user) {
+    throw new AuthenticationError("Invalid Credential");
+  }
+
+  if (user.email_verified_at) {
+    throw new ConflictError("Email already verified");
+  }
+
+  const token = await emailVerificationTokenService.create(user.id);
+  await emailService.sendVerificationEmail(user.email, token);
+};
+
 const verifyEmail = async (token: string) => {
   if (!token) {
     throw new ValidationError({ token: "No token provided" });
@@ -368,6 +387,7 @@ const logout = async (tokens: Tokens) => {
 
 const authService = {
   register,
+  requestEmailVerification,
   verifyEmail,
   refresh,
   login,
