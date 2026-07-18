@@ -356,11 +356,22 @@ const refresh = async (cookies: Tokens): Promise<Tokens> => {
   };
 };
 
+const logout = async (tokens: Tokens) => {
+  const refreshToken = tokens?.refreshToken || "";
+
+  if (!refreshToken) {
+    return;
+  }
+
+  await refreshTokenService.revokeByToken(refreshToken);
+};
+
 const authService = {
   register,
   verifyEmail,
   refresh,
   login,
+  logout,
 };
 
 export default authService;

@@ -35,11 +35,18 @@ const refresh = async (req: Request, res: Response) => {
   res.status(STATUS_CODE.OK).json({ success: true });
 };
 
+const logout = async (req: Request, res: Response) => {
+  await authService.logout(req.cookies as Tokens);
+  cookieService.remove(res);
+  res.status(STATUS_CODE.OK).json({ success: true });
+};
+
 const authController = {
   register,
   verifyEmail,
   refresh,
   login,
+  logout,
 };
 
 export default authController;
