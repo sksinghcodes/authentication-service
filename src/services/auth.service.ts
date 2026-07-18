@@ -19,6 +19,7 @@ import { Tokens } from "../types/token.type.js";
 import bcryptService from "./bcrypt.service.js";
 import refreshTokenService from "./refreshToken.service.js";
 import jwt from "jsonwebtoken";
+import passwordResetTokenService from "./password-reset-token.service.js";
 
 const { JsonWebTokenError, TokenExpiredError } = jwt;
 
@@ -375,6 +376,25 @@ const refresh = async (cookies: Tokens): Promise<Tokens> => {
   };
 };
 
+const requestPasswordReset = async (usernameOrEmail: string) => {
+  if (!usernameOrEmail) {
+    throw new AuthenticationError("Invalid username or email");
+  }
+
+  const user = await userRepository.findByUsernameOrEmail(usernameOrEmail);
+
+  if (!user) {
+    throw new AuthenticationError("Invalid username or email");
+  }
+
+  if (!user.email_verified_at) {
+    throw new AuthenticationError("Email is not verified");
+  }
+
+  const token = await passwordResetTokenService.create(user.id);
+  await emailService.sendPasswordResetEmail(user.email, token);
+};
+
 const logout = async (tokens: Tokens) => {
   const refreshToken = tokens?.refreshToken || "";
 
@@ -388,6 +408,7 @@ const logout = async (tokens: Tokens) => {
 const authService = {
   register,
   requestEmailVerification,
+  requestPasswordReset,
   verifyEmail,
   refresh,
   login,

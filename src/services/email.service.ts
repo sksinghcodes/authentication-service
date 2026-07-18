@@ -11,8 +11,19 @@ const sendVerificationEmail = async (email: string, token: string) => {
   });
 };
 
+const sendPasswordResetEmail = async (email: string, token: string) => {
+  const verificationUrl = `${FRONTEND_URL}/reset_forgotten_password?token=${token}`;
+  await transporter.sendMail({
+    from: SMTP_USER,
+    to: email,
+    subject: "Reset your password",
+    text: `Click the following link to reset you password:\n\n${verificationUrl} \n\n This link is valid for next 10 minutes`,
+  });
+};
+
 const emailService = {
   sendVerificationEmail,
+  sendPasswordResetEmail,
 };
 
 export default emailService;

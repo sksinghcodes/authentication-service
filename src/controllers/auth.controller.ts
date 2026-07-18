@@ -1,6 +1,5 @@
 import type { Request, Response } from "express";
 import authService from "../services/auth.service.js";
-import path from "node:path";
 import { Tokens } from "../types/token.type.js";
 import cookieService from "../services/cookie.service.js";
 import { STATUS_CODE } from "../config/constants.js";
@@ -26,6 +25,11 @@ const login = async (req: Request, res: Response) => {
   res.status(STATUS_CODE.OK).json({ success: true });
 };
 
+const requestPasswordReset = async (req: Request, res: Response) => {
+  await authService.requestPasswordReset(req?.body?.usernameOrEmail || "");
+  res.status(STATUS_CODE.OK).json({ success: true });
+};
+
 const refresh = async (req: Request, res: Response) => {
   const tokens = await authService.refresh(req.cookies as Tokens);
   cookieService.set(res, tokens);
@@ -41,6 +45,7 @@ const logout = async (req: Request, res: Response) => {
 const authController = {
   register,
   requestEmailVerification,
+  requestPasswordReset,
   verifyEmail,
   refresh,
   login,

@@ -14,6 +14,10 @@ authRouter.post(
   "/request-email-verification",
   asyncHandler(authController.requestEmailVerification),
 );
+authRouter.post(
+  "/forgot-password",
+  asyncHandler(authController.requestPasswordReset),
+);
 authRouter.post("/refresh", asyncHandler(authController.refresh));
 authRouter.post("/logout", asyncHandler(authController.logout));
 
