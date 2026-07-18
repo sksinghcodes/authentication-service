@@ -127,10 +127,29 @@ const markEmailAsVerified = async (
   await db.query(query);
 };
 
+const updatePasswordHash = async (
+  userId: string,
+  passwordHash: string,
+  client?: PoolClient,
+): Promise<void> => {
+  const db = client ?? pool;
+  const query = {
+    text: `
+      UPDATE users
+      SET password_hash = $1
+      WHERE id = $2;
+    `,
+    values: [passwordHash, userId],
+  };
+
+  await db.query(query);
+};
+
 const userRepository = {
   create,
   findByEmail,
   findByUsername,
+  updatePasswordHash,
   markEmailAsVerified,
   findByUsernameOrEmail,
 };

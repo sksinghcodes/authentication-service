@@ -3,6 +3,7 @@ import authService from "../services/auth.service.js";
 import { Tokens } from "../types/token.type.js";
 import cookieService from "../services/cookie.service.js";
 import { STATUS_CODE } from "../config/constants.js";
+import { TokenAndNewPassword } from "../types/password-reset-token.types.js";
 
 const register = async (req: Request, res: Response) => {
   const user = await authService.register(req.body);
@@ -30,6 +31,16 @@ const requestPasswordReset = async (req: Request, res: Response) => {
   res.status(STATUS_CODE.OK).json({ success: true });
 };
 
+const resetPasswordByToken = async (req: Request, res: Response) => {
+  const tokenAndNewPassword: TokenAndNewPassword = {
+    token: req?.body?.token || "",
+    newPassword: req?.body?.newPassword || "",
+  };
+
+  await authService.resetPasswordByToken(tokenAndNewPassword);
+  res.status(STATUS_CODE.OK).json({ success: true });
+};
+
 const refresh = async (req: Request, res: Response) => {
   const tokens = await authService.refresh(req.cookies as Tokens);
   cookieService.set(res, tokens);
@@ -46,6 +57,7 @@ const authController = {
   register,
   requestEmailVerification,
   requestPasswordReset,
+  resetPasswordByToken,
   verifyEmail,
   refresh,
   login,

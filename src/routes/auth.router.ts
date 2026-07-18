@@ -18,6 +18,10 @@ authRouter.post(
   "/forgot-password",
   asyncHandler(authController.requestPasswordReset),
 );
+authRouter.post(
+  "/reset-password-by-token",
+  asyncHandler(authController.resetPasswordByToken),
+);
 authRouter.post("/refresh", asyncHandler(authController.refresh));
 authRouter.post("/logout", asyncHandler(authController.logout));
 

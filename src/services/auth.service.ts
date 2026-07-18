@@ -20,6 +20,8 @@ import bcryptService from "./bcrypt.service.js";
 import refreshTokenService from "./refreshToken.service.js";
 import jwt from "jsonwebtoken";
 import passwordResetTokenService from "./password-reset-token.service.js";
+import { TokenAndNewPassword } from "../types/password-reset-token.types.js";
+import passwordResetTokenRepository from "../repositories/password-reset-token.repository.js";
 
 const { JsonWebTokenError, TokenExpiredError } = jwt;
 
@@ -395,6 +397,82 @@ const requestPasswordReset = async (usernameOrEmail: string) => {
   await emailService.sendPasswordResetEmail(user.email, token);
 };
 
+const resetPasswordByToken = async (
+  tokenAndNewPassword: TokenAndNewPassword,
+) => {
+  const { token, newPassword } = tokenAndNewPassword;
+
+  if (!token) {
+    throw new AuthenticationError("Token is invalid");
+  }
+
+  const tokenResult = await passwordResetTokenService.findByToken(token);
+
+  if (!tokenResult) {
+    throw new AuthenticationError("Token is invalid");
+  }
+
+  if (tokenResult.expires_at.getTime() < Date.now()) {
+    await passwordResetTokenRepository.deleteById(tokenResult.id);
+    throw new AuthenticationError("Token is expired");
+  }
+
+  let passwordValidationError = "";
+
+  if (!newPassword) {
+    passwordValidationError = "Password is missing";
+  } else if (newPassword.length < 8) {
+    passwordValidationError = "Password length should not be less than 8";
+  } else if (newPassword.length > 30) {
+    passwordValidationError = "Password length should not be more than 30";
+  } else if (newPassword.includes(" ")) {
+    passwordValidationError = "Password should be without spaces";
+  } else {
+    const passwordValid = hasOnlyValidCharacters(newPassword, {
+      alphabeticLower: true,
+      alphabeticUpper: true,
+      numeric: true,
+      otherCharacters: "!@#$^*()-_+=.?",
+    });
+
+    if (!passwordValid.isValid) {
+      passwordValidationError =
+        "These characters are not allowed in Password " +
+        passwordValid.invalidChars.join();
+    }
+  }
+
+  if (passwordValidationError) {
+    throw new ValidationError({ newPassword: passwordValidationError });
+  }
+
+  const passwordHash = await bcryptService.hash(newPassword);
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    await userRepository.updatePasswordHash(
+      tokenResult.user_id,
+      passwordHash,
+      client,
+    );
+
+    await passwordResetTokenRepository.deleteAllByUserId(
+      tokenResult.user_id,
+      client,
+    );
+
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
 const logout = async (tokens: Tokens) => {
   const refreshToken = tokens?.refreshToken || "";
 
@@ -409,6 +487,7 @@ const authService = {
   register,
   requestEmailVerification,
   requestPasswordReset,
+  resetPasswordByToken,
   verifyEmail,
   refresh,
   login,

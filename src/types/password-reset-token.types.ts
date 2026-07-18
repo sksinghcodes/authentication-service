@@ -9,3 +9,8 @@ export interface PasswordResetTokenFindRepoOutput {
   user_id: string;
   expires_at: Date;
 }
+
+export interface TokenAndNewPassword {
+  token: string;
+  newPassword: string;
+}
