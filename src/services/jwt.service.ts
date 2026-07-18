@@ -7,7 +7,7 @@ import {
 } from "../config/env.js";
 import type {
   CreateTokenInput,
-  CreateTokenOutput,
+  TokenInfo,
   JwtTokenPayload,
 } from "../types/token.type.js";
 import {
@@ -20,20 +20,20 @@ const createToken = ({
   userId,
   secret,
   expiresInSeconds,
-}: CreateTokenInput): CreateTokenOutput => {
+}: CreateTokenInput): TokenInfo => {
   const iat = Math.floor(Date.now() / MILLISECONDS_IN_A_SECOND);
   const exp = iat + expiresInSeconds;
-  const token = jwt.sign({ sub: userId, exp, iat }, secret, {
+  const value = jwt.sign({ sub: userId, exp, iat }, secret, {
     algorithm: "HS256",
   });
   return {
-    token,
+    value,
     issuedAt: new Date(iat * MILLISECONDS_IN_A_SECOND),
     expiresAt: new Date(exp * MILLISECONDS_IN_A_SECOND),
   };
 };
 
-const createRefreshToken = (userId: string) => {
+const createRefreshToken = (userId: string): TokenInfo => {
   return createToken({
     userId,
     secret: JWT_REFRESH_SECRET,
@@ -63,10 +63,16 @@ const verifyAccessToken = (token: string): JwtTokenPayload => {
   return verifyToken(token, JWT_ACCESS_SECRET);
 };
 
+const createAuthTokens = (userId: string) => {
+  return {
+    refreshToken: createRefreshToken(userId),
+    accessToken: createAccessToken(userId),
+  };
+};
+
 const jwtService = {
-  createRefreshToken,
+  createAuthTokens,
   verifyRefreshToken,
-  createAccessToken,
   verifyAccessToken,
 };
 

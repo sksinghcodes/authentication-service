@@ -15,9 +15,7 @@ import ConflictError from "../errors/conflict-error.js";
 import AuthenticationError from "../errors/authentication-error.js";
 import ForbiddenError from "../errors/forbidden-error.js";
 import jwtService from "./jwt.service.js";
-import refreshTokenRepository from "../repositories/refresh-token.repository.js";
 import { Tokens } from "../types/token.type.js";
-import cryptoService from "./crypo.service.js";
 import bcryptService from "./bcrypt.service.js";
 import refreshTokenService from "./refreshToken.service.js";
 import jwt from "jsonwebtoken";
@@ -253,23 +251,19 @@ const login = async (credentials: UserLoginRequest, cookies: Tokens) => {
     throw new AuthenticationError("Invalid credentials");
   }
 
-  const accessToken = jwtService.createAccessToken(user.id);
-  const refreshToken = jwtService.createRefreshToken(user.id);
+  const tokens = jwtService.createAuthTokens(user.id);
 
-  const tokenHash = cryptoService.hash(refreshToken.token);
   const client = await pool.connect();
 
   try {
     await client.query("BEGIN");
-    await refreshTokenRepository.create(
+    await refreshTokenService.store(
       {
-        user_id: user.id,
-        token_hash: tokenHash,
-        expires_at: refreshToken.expiresAt,
-        created_at: refreshToken.issuedAt,
-        device_info: null,
-        user_agent: null,
-        ip_address: null,
+        userId: user.id,
+        tokenInfo: tokens.refreshToken,
+        deviceInfo: null,
+        userAgent: null,
+        ipAddress: null,
       },
       client,
     );
@@ -279,8 +273,8 @@ const login = async (credentials: UserLoginRequest, cookies: Tokens) => {
     }
     await client.query("COMMIT");
     return {
-      accessToken: accessToken.token,
-      refreshToken: refreshToken.token,
+      accessToken: tokens.accessToken.value,
+      refreshToken: tokens.refreshToken.value,
     };
   } catch (error) {
     await client.query("ROLLBACK");
@@ -328,27 +322,20 @@ const refresh = async (cookies: Tokens): Promise<Tokens> => {
     throw new TokenExpiredError("jwt expired", refreshToken.expires_at);
   }
 
-  const newTokens = {
-    refresh: jwtService.createRefreshToken(refreshToken.user_id),
-    access: jwtService.createAccessToken(refreshToken.user_id),
-  };
-
-  const newRefreshTokenHash = cryptoService.hash(newTokens.refresh.token);
+  const newTokens = jwtService.createAuthTokens(refreshToken.user_id);
 
   const client = await pool.connect();
 
   try {
     await client.query("BEGIN");
 
-    await refreshTokenRepository.create(
+    await refreshTokenService.store(
       {
-        user_id: refreshToken.user_id,
-        token_hash: newRefreshTokenHash,
-        expires_at: newTokens.refresh.expiresAt,
-        created_at: newTokens.refresh.issuedAt,
-        device_info: null,
-        user_agent: null,
-        ip_address: null,
+        userId: refreshToken.user_id,
+        tokenInfo: newTokens.refreshToken,
+        deviceInfo: null,
+        userAgent: null,
+        ipAddress: null,
       },
       client,
     );
@@ -364,8 +351,8 @@ const refresh = async (cookies: Tokens): Promise<Tokens> => {
   }
 
   return {
-    refreshToken: newTokens.refresh.token,
-    accessToken: newTokens.access.token,
+    refreshToken: newTokens.refreshToken.value,
+    accessToken: newTokens.accessToken.value,
   };
 };
 

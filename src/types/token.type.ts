@@ -10,8 +10,8 @@ export interface CreateTokenInput {
   expiresInSeconds: number;
 }
 
-export interface CreateTokenOutput {
-  token: string;
+export interface TokenInfo {
+  value: string;
   issuedAt: Date;
   expiresAt: Date;
 }
@@ -41,4 +41,12 @@ export interface RefreshTokenFindRepoOutput {
   device_info: string | null;
   user_agent: string | null;
   ip_address: string | null;
+}
+
+export interface RefreshTokenStoreServiceInput {
+  userId: string;
+  tokenInfo: TokenInfo;
+  deviceInfo: string | null;
+  userAgent: string | null;
+  ipAddress: string | null;
 }
